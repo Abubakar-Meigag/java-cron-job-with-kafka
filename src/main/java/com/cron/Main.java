@@ -2,6 +2,9 @@ package com.cron;
 
 import com.cron.modules.CronJob;
 import com.cron.modules.CrontabParser;
+import com.cron.modules.PrintJob;
+import org.quartz.*;
+import org.quartz.impl.StdSchedulerFactory;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -15,12 +18,32 @@ public class Main {
         }
 
         Path file = Path.of(args[0]);
-
         CrontabParser parser = new CrontabParser();
         List<CronJob> jobs = parser.parse(file);
 
-        for (CronJob j : jobs) {
-            System.out.println("Job " + j.getLineNumber() + ": " + j.getCronExpression());
+        Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
+        scheduler.start();
+
+        for (CronJob job : jobs) {
+            JobDetail detail = JobBuilder.newJob(PrintJob.class)
+                    .withIdentity("job-" + job.getLineNumber())
+                    .usingJobData("lineNumber", job.getLineNumber())
+                    .build();
+
+            String[] parts = job.getCronExpression().trim().split("\\s+");
+            if (parts[4].equals("*")) {
+                parts[4] = "?";
+            }
+            String quartzExpr = "0 " + String.join(" ", parts);
+
+            Trigger trigger = TriggerBuilder.newTrigger()
+                            .withIdentity("trigger-" + job.getLineNumber())
+                            .withSchedule(CronScheduleBuilder.cronSchedule(quartzExpr))
+                            .build();
+
+            scheduler.scheduleJob(detail, trigger);
         }
+
+        System.out.println("Scheduler started with " + jobs.size() + " jobs. Waiting...");
     }
 }

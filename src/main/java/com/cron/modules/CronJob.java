@@ -2,8 +2,8 @@ package com.cron.modules;
 
 public class CronJob {
 
-    private int lineNumber;
-    private String cronExpression;
+    private final int lineNumber;
+    private final String cronExpression;
 
     public CronJob(int lineNumber, String cronExpression) {
         this.lineNumber = lineNumber;
