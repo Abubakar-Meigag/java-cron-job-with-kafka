@@ -4,35 +4,59 @@ services:
     # official Apache Kafka image
     image: apache/kafka:latest
     container_name: kafka
-    # expose broker to your host machine for local testing
     ports:
+      # internal listener still maps out; host code connects via 9093 below
       - "9092:9092"
+      # host listener — lets Java running on myMac reach the broker
+      - "9093:9093"
     environment:
       # KRaft requires this node to act as both broker and controller
       KAFKA_PROCESS_ROLES: broker,controller
       # unique id for this broker in the cluster
       KAFKA_NODE_ID: 1
       # who votes on cluster leadership (nodeId@host:controllerPort)
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      # where kafka binds: one listener for clients, one for the controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      # what kafka tells clients to connect back on
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9094
+      # three listeners now: internal (containers), host myMac, controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_HOST://:9093,CONTROLLER://:9094
+      # what each listener tells clients to connect back on
+      # containers use kafka:9092; the Mac uses localhost:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
       # which listener name is used for controller traffic
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       # security protocol for each listener name
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # which listener brokers use to talk to each other
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       # single broker, so replication of 1
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      # persist Kafka's data so topics/messages survive restarts
+      - kafka_data:/var/lib/kafka/data
 
-  # your scheduler — the "producer" side, added in step 3
-  scheduler:
-    # build from your Dockerfile
-    build: .
+  # web dashboard for topics, partitions, messages, consumer groups
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: kafka-ui
+    ports:
+      # open http://localhost:8080 in browser
+      - "8080:8080"
     depends_on:
-      # don't start until kafka is up
       - kafka
     environment:
-      # scheduler connects using the service name, not localhost
+      KAFKA_CLUSTERS_0_NAME: local-kafka
+      # UI connects to the broker over the internal docker network
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      # no ZOOKEEPER line — KRaft has none
+
+  # the scheduler — the "producer" side, added in step 3
+  scheduler:
+    build: .
+    depends_on:
+      - kafka
+    environment:
+      # scheduler runs inside docker, so it uses the internal address
       KAFKA_BROKER: kafka:9092
 
+# named volume declaration (required when volumes are referenced above)
+volumes:
+  kafka_data:
