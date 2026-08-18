@@ -57,6 +57,20 @@ services:
       # scheduler runs inside docker, so it uses the internal address
       KAFKA_BROKER: kafka:9092
 
+  # startup helper: waits for kafka, then creates topics automatically
+  init-kafka:
+    image: apache/kafka:latest
+    depends_on:
+      - kafka
+    command:
+      - /bin/sh
+      - -c
+      - |
+        sleep 10
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic cluster-a --partitions 2 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic cluster-b --partitions 2 --replication-factor 1
+        echo 'topics ready'
+
 # named volume declaration (required when volumes are referenced above)
 volumes:
   kafka_data:
