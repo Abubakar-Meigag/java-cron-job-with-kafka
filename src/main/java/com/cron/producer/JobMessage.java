@@ -11,7 +11,7 @@ public class JobMessage {
     // when the producer decided this job was due (ISO timestamp string)
     private String scheduledTime;
 
-    // Jackson needs a no-arg constructor to serialize/deserialize
+    // Jackson needs a no-arguments constructor to serialize/deserialize
     public JobMessage() {}
 
     public JobMessage(int jobId, String cluster, String command, String scheduledTime) {

@@ -3,6 +3,7 @@ package com.cron;
 import com.cron.modules.CronJob;
 import com.cron.modules.CrontabParser;
 import com.cron.modules.PrintJob;
+import com.cron.producer.KafkaMessageProducer;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
 
@@ -24,10 +25,16 @@ public class Main {
         Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
         scheduler.start();
 
+        String broker = System.getenv().getOrDefault("KAFKA_BROKER", "localhost:9093");
+        KafkaMessageProducer producer = new KafkaMessageProducer(broker);
+        scheduler.getContext().put("producer", producer);
+
         for (CronJob job : jobs) {
             JobDetail detail = JobBuilder.newJob(PrintJob.class)
                     .withIdentity("job-" + job.getLineNumber())
                     .usingJobData("lineNumber", job.getLineNumber())
+                    .usingJobData("cluster", job.getCluster())
+                    .usingJobData("cronExpression", job.getCronExpression())
                     .build();
 
             String[] parts = job.getCronExpression().trim().split("\\s+");

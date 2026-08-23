@@ -14,8 +14,12 @@ public class CrontabParser {
 
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i);
-            if(!line.isEmpty()) {
-                jobs.add(new CronJob(i, line));
+            if(!line.trim().isEmpty()) {
+                String[] parts = line.trim().split("\\s+");
+                String cluster = parts[0];
+                String cronExpression = String.join(" ",
+                        java.util.Arrays.copyOfRange(parts, 1, 6 ));
+                jobs.add(new CronJob(i, cluster, cronExpression));
             }
         }
         return jobs;
