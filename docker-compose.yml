@@ -50,12 +50,36 @@ services:
 
   # the scheduler — the "producer" side, added in step 3
   scheduler:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.producer
     depends_on:
-      - kafka
+      init-kafka:
+        condition: service_completed_successfully
     environment:
-      # scheduler runs inside docker, so it uses the internal address
       KAFKA_BROKER: kafka:9092
+
+  consumer-a:
+    build:
+      context: .
+      dockerfile: Dockerfile.consumer
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BROKER: kafka:9092
+      CLUSTER_TOPIC: cluster-a
+
+  consumer-b:
+    build:
+      context: .
+      dockerfile: Dockerfile.consumer
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BROKER: kafka:9092
+      CLUSTER_TOPIC: cluster-b
 
   # startup helper: waits for kafka, then creates topics automatically
   init-kafka:
