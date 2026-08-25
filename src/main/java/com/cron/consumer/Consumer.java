@@ -32,6 +32,12 @@ public class Consumer {
             var records = consumer.poll(Duration.ofSeconds(1));
 
             for (var record : records) {
+                if (record.value() == null) {
+                    System.out.println("Skipping null message on " + record.topic());
+                    continue;
+                }
+                try {
+
                 JobMessage job = mapper.readValue(record.value(), JobMessage.class);
                 System.out.println("Received on " + job.getJobId() + "for cluster " + job.getCluster());
                 System.out.println("Running command " + job.getCommand());
@@ -40,6 +46,9 @@ public class Consumer {
                 pb.inheritIO();
                 Process process = pb.start();
                 process.waitFor();
+                } catch (Exception e) {
+                    System.out.println("Failed to process message: " + e.getMessage());
+                }
             }
         }
 

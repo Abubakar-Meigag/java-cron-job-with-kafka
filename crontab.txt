@@ -1,2 +1,2 @@
 cluster-a * * * * *
-cluster-b 15 * * * *
+cluster-b * * * * *

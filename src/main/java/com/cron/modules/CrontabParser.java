@@ -16,6 +16,12 @@ public class CrontabParser {
             String line = lines.get(i);
             if(!line.trim().isEmpty()) {
                 String[] parts = line.trim().split("\\s+");
+
+                if (parts.length < 6 ) {
+                    System.out.println("Skipping malformed line " + i + ": " + line);
+                    continue;
+                }
+
                 String cluster = parts[0];
                 String cronExpression = String.join(" ",
                         java.util.Arrays.copyOfRange(parts, 1, 6 ));
